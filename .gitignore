@@ -1,0 +1,21 @@
+# Build artifacts
+build/
+dist/
+*.spec
+*.exe
+*.exe.bak
+
+# Python
+__pycache__/
+*.pyc
+
+# Runtime logs and config
+player_config.json
+player_err.txt
+voice_log.txt
+
+# Vosk model (large, users download separately)
+vosk-model/
+
+# Claude Code
+.claude/
