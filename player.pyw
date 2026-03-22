@@ -16,8 +16,11 @@ except ImportError:
 try: import pystray; HAS_TRAY = True
 except ImportError: HAS_TRAY = False
 
-try: import vosk, sounddevice as sd; HAS_VOICE = True; vosk.SetLogLevel(-1)
-except ImportError: HAS_VOICE = False
+try:
+    if getattr(sys, 'frozen', False):
+        os.add_dll_directory(os.path.join(sys._MEIPASS, "vosk"))
+    import vosk, sounddevice as sd; HAS_VOICE = True; vosk.SetLogLevel(-1)
+except (ImportError, OSError): HAS_VOICE = False
 
 try: from pypresence import Presence, ActivityType; HAS_RPC = True
 except ImportError: HAS_RPC = False
@@ -1129,7 +1132,10 @@ class MiniPlayer:
             def cb(indata, frames, t, status):
                 a = np.frombuffer(indata, dtype="int16").astype("float32")
                 p = np.max(np.abs(a))
-                if p > 10: a = a * (16000 / p)
+                if p < 80:
+                    return  # ignore background noise
+                if p > 10:
+                    a = a * (16000 / p)
                 ix = np.arange(0, len(a), ratio).astype(int)
                 ix = ix[ix < len(a)]
                 q.put(np.clip(a[ix], -32768, 32767).astype("int16").tobytes())
