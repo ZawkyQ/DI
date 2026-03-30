@@ -1141,45 +1141,41 @@ class MiniPlayer:
                 q.put(np.clip(a[ix], -32768, 32767).astype("int16").tobytes())
 
             self._vlog(f"Mic: {dev['name']}")
-            with sd.RawInputStream(samplerate=sr, blocksize=int(sr*0.25),
+            with sd.RawInputStream(samplerate=sr, blocksize=int(sr*0.1),
                                    dtype="int16", channels=1, callback=cb):
                 self._vlog("Listening...")
                 cd = 0
                 while self.running:
                     try: data = q.get(timeout=0.3)
                     except: continue
-                    if time.time() < cd: continue
+                    if time.time() < cd:
+                        rec.AcceptWaveform(data)  # feed but ignore
+                        continue
                     if rec.AcceptWaveform(data):
-                        t = json.loads(rec.Result()).get("text", "").lower()
-                        if t:
-                            self._vlog(f"HEARD: {t}")
-                            cmd = self._vcmd(t)
-                            if cmd:
-                                cd = time.time() + 2; _beep()
-                                self.root.after(0, cmd)
+                        rec.Result()  # discard full result, FAST handles it
                     else:
                         t = json.loads(rec.PartialResult()).get("partial", "").lower()
                         if t:
                             cmd = self._vcmd(t)
                             if cmd:
                                 self._vlog(f"FAST: {t}")
-                                cd = time.time() + 2; rec.Reset(); _beep()
+                                cd = time.time() + 1.5; rec.Reset(); _beep()
                                 self.root.after(0, cmd)
         except Exception as e:
             self._vlog(f"VOICE ERROR: {e}")
 
     def _vcmd(self, t):
-        for w in ("стоп","пауза","останови","стой"):
+        for w in ("стоп","стой","пауз","останов","хватит","замолч"):
             if w in t: return self._do_toggle
-        for w in ("играй","продолжи","плей","включи","давай"):
+        for w in ("играй","игра","продолж","плей","включ","давай","старт","запус"):
             if w in t: return self._do_toggle
-        for w in ("следующ","дальше","скип"):
+        for w in ("следующ","дальш","скип","перемот","пропус"):
             if w in t: return self._do_next
-        for w in ("предыдущ","назад","верни"):
+        for w in ("предыдущ","назад","верни","прошл"):
             if w in t: return self._do_prev
-        for w in ("громче","прибавь"):
+        for w in ("громч","прибав","погромч"):
             if w in t: return lambda: _vol(0xAF)
-        for w in ("тише","убавь"):
+        for w in ("тиш","убав","потиш"):
             if w in t: return lambda: _vol(0xAE)
         return None
 
